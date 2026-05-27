@@ -1,91 +1,12 @@
 import numpy as np
+from useful import UsefulFunctions
 
 # Obliquity of the ecliptic at J2000.0
 EPSILON = np.radians(23.43927944)  # 23° 26' 21.406''
 
+useful = UsefulFunctions()
 
 #                    --- Useful functions ---
-
-    # Verifications
-def verify_1or2(n):
-    if n not in (1, 2):
-        raise ValueError("Error: Number must be 1 or 2")
-
-def verify_coords(vector):
-    if vector.size != 3:
-        raise ValueError("Error: Coordinates must be a size 3 vector.")
-
-def verify_dms(n, d, m, s):  # n is the maximum value, i.e., 90 or 360
-
-    if n == 90:
-        if abs(d) > 90:
-            raise ValueError("Degrees must be between -90 and 90.")
-    elif n == 360:
-        if not (0 <= d < 360):
-            raise ValueError("Degrees must be between 0 and 360.")
-    if not (0 <= m < 60):
-        raise ValueError("Arcminutes must be between 0 and 60.")
-    if not (0 <= s < 60):
-        raise ValueError("Arcseconds must be between 0 and 60.")
-
-    return True
-
-
-def verify_hms(h, m, s):
-
-    if not (0 <= h < 24):
-        raise ValueError("Hours must be between 0 and 24.")
-    if not (0 <= m < 60):
-        raise ValueError("Minutes must be between 0 and 60.")
-    if not (0 <= s < 60):
-        raise ValueError("Seconds must be between 0 and 60.")
-
-    return True
-
-
-    # Conversions
-
-        # From Degrees-Minutes-Seconds (DMS) to Degrees
-def dms_to_degrees(d, m, s):
-
-    sign = -1 if d < 0 else 1
-    d = abs(d)
-
-    return sign * (d + m/60 + s/3600)
-
-
-        # From Hours-Minutes-Seconds (HMS) to Degrees
-def hms_to_degrees(h, m, s):
-    return 15 * (h + m/60 + s/3600)
-
-
-        # From Radians to DMS
-def radians_to_dms(rad):
-
-    deg = np.degrees(rad)
-    sign = -1 if deg < 0 else 1
-    deg = abs(deg)
-
-    d = int(deg)
-    m = int((deg - d) * 60)
-    s = (deg - d - m/60) * 3600
-
-    return sign, d, m, s
-
-
-        # From Radians to HMS
-def radians_to_hms(rad):
-
-    rad = rad % (2*np.pi)
-
-    total_hours = np.degrees(rad) / 15
-
-    h = int(total_hours)
-    m = int((total_hours - h) * 60)
-    s = (total_hours - h - m/60) * 3600
-
-    return h, m, s
-
 
     # Getting the Spherical coords
 def input_spherical(a):
@@ -106,7 +27,7 @@ def input_spherical(a):
         dm_long = float(input("Arcminutes: \t"))
         ds_long = float(input("Arcseconds: \t"))
 
-        verify_dms(360, d_long, dm_long, ds_long)
+        useful.verify_dms(360, d_long, dm_long, ds_long)
 
         print("\nEcliptical Latitude (DMS)")
 
@@ -114,10 +35,10 @@ def input_spherical(a):
         dm_lat = float(input("Arcminutes: \t"))
         ds_lat = float(input("Arcseconds: \t"))
 
-        verify_dms(90, d_lat, dm_lat, ds_lat)
+        useful.verify_dms(90, d_lat, dm_lat, ds_lat)
 
-        long_deg = dms_to_degrees(d_long, dm_long, ds_long)
-        lat_deg = dms_to_degrees(d_lat, dm_lat, ds_lat)
+        long_deg = useful.dms_to_degrees(d_long, dm_long, ds_long)
+        lat_deg = useful.dms_to_degrees(d_lat, dm_lat, ds_lat)
 
         long_rad = np.radians(long_deg)
         lat_rad = np.radians(lat_deg)
@@ -136,7 +57,7 @@ def input_spherical(a):
         m = float(input("Minutes: \t"))
         s = float(input("Seconds: \t"))
 
-        verify_hms(h, m, s)
+        useful.verify_hms(h, m, s)
 
         print("\nDeclination (DD MM SS)")
 
@@ -144,10 +65,10 @@ def input_spherical(a):
         dm = float(input("Arcminutes: \t"))
         ds = float(input("Arcseconds: \t"))
 
-        verify_dms(90, d, dm, ds)
+        useful.verify_dms(90, d, dm, ds)
 
-        ra_deg = hms_to_degrees(h, m, s)
-        dec_deg = dms_to_degrees(d, dm, ds)
+        ra_deg = useful.hms_to_degrees(h, m, s)
+        dec_deg = useful.dms_to_degrees(d, dm, ds)
 
         ra_rad = np.radians(ra_deg)
         dec_rad = np.radians(dec_deg)
@@ -307,15 +228,15 @@ def manual_input():
 
     # ORIGIN
     a = int(input("\nHeliocentric (1)    Geocentric (2): \t"))
-    verify_1or2(a)
+    useful.verify_1or2(a)
 
     # PLANE
     b = int(input("\nEcliptic (1)    Equatorial (2): \t"))
-    verify_1or2(b)
+    useful.verify_1or2(b)
 
     # TYPE
     c = int(input("\nCartesian (1)    Spherical (2): \t"))
-    verify_1or2(c)
+    useful.verify_1or2(c)
 
     # Current coordinates
 
@@ -323,12 +244,12 @@ def manual_input():
     if c == 2:
 
         initial_coords = input_spherical(a)
-        verify_coords(initial_coords)
+        useful.verify_coords(initial_coords)
 
     else:
         initial_coords = np.array(list(map(float,input(
             "\nEnter the 3 OBJECT coordinates separated by space:\n").split())))
-        verify_coords(initial_coords)
+        useful.verify_coords(initial_coords)
 
         # Earth coords
 
@@ -337,19 +258,20 @@ def manual_input():
     e = int(input(
         "\nDo you have the Earth coordinates?"
         "\nYES (1)    NO (2)\n"))
-    verify_1or2(e)
+    useful.verify_1or2(e)
 
     if e == 1:
         earth_coords = np.array(list(map(float,input(
                     "\nEnter the 3 EARTH coordinates separated by space:\n").split())))
-        verify_coords(earth_coords)
+        useful.verify_coords(earth_coords)
 
     return initial_coords, earth_coords, a, b, c, e
 
 
 #                    --- Main program ---
 
-if __name__ == "__main__":
+def main():
+    
     try:
 
         initial_coords, earth_coords, a, b, c, e = manual_input()
@@ -376,8 +298,8 @@ if __name__ == "__main__":
             if "Spherical" in k and "Geocentric" in k:
 
                 r, ra, dec = v
-                h, hm, hs = radians_to_hms(ra)
-                sign, d, dm, ds = radians_to_dms(dec)
+                h, hm, hs = useful.radians_to_hms(ra)
+                sign, d, dm, ds = useful.radians_to_dms(dec)
                 sign_str = "-" if sign < 0 else "+"
                 print(k)
                 print(f"  Distance: {r:.8f} AU")
@@ -387,8 +309,8 @@ if __name__ == "__main__":
             elif "Spherical" in k and "Heliocentric" in k:
 
                 r, lon, lat = v
-                sign_lon, d_lon, dm_lon, ds_lon = radians_to_dms(lon)
-                sign_lat, d_lat, dm_lat, ds_lat = radians_to_dms(lat)
+                sign_lon, d_lon, dm_lon, ds_lon = useful.radians_to_dms(lon)
+                sign_lat, d_lat, dm_lat, ds_lat = useful.radians_to_dms(lat)
                 sign_lon_str = "-" if sign_lon < 0 else "+"
                 sign_lat_str = "-" if sign_lat < 0 else "+"
                 print(k)
@@ -408,3 +330,7 @@ if __name__ == "__main__":
 
     except Exception as error:
         print(f"\nERROR: {error}")
+
+
+if __name__ == "__main__":
+    main()

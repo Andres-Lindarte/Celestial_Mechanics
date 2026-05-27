@@ -1,15 +1,10 @@
 import numpy as np
+from useful import UsefulFunctions
 
 #                    --- Useful funtions ---
-def radians_to_dms(rad):
-    deg = np.degrees(rad)
-    sign_string = "-" if deg < 0 else "+"
-    deg = abs(deg)
-    d = int(deg)
-    m = int((deg - d) * 60)
-    s = (deg - d - m/60) * 3600
-    return sign_string, d, m, s
     
+useful = UsefulFunctions()
+
 def position_vector (x,y,z):
     # Calculate the magnitude of the position vector
     position = np.array([x, y, z])
@@ -37,7 +32,7 @@ def angular_momentum_vector (position, velocity):
 def cenital_angle (r_magnitude, v_magnitude, position, velocity):
     # Calculate the cenital angle (cen) using the formula: cen = arccos((position . velocity )/(rv))
     cen = np.arccos((np.dot(position, velocity)) / (r_magnitude * v_magnitude))
-    sign, d, m, s = radians_to_dms(cen)
+    sign, d, m, s = useful.radians_to_dms(cen)
     print(f"Cenital Angle: (cen)= {np.degrees(cen):.8f} = {sign}{d}° {m}' {s:.2f}\" \n")
     return cen
 

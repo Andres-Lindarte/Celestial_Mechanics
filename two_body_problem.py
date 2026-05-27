@@ -25,6 +25,7 @@ Description:
 """
 
 from coordenates import Coords
+from useful import UsefulFunctions
 import numpy as np 
 import argparse
 
@@ -128,7 +129,7 @@ def mean_excentric_anomaly(M_r, t, a, object_name, relative_mass=0):
     n = K * (180/np.pi) * np.sqrt((1 + relative_mass) / a**3)
     
     M = M_r + n * (t - reference_time)
-    print(f"Mean Anomaly of {object_name} in {t} (JD): (M)= {M:.8f}° \n")
+    print(f"Mean Anomaly: (M)= {M:.8f}° \n")
     return M
 
 def eliptic_eccentric_anomaly_newton(M_deg, e, tolerance=1e-8):
@@ -211,32 +212,7 @@ def manual_input():
 
 #              --- Useful functions (converters) ---
 
-        # From Radians to DMS
-def radians_to_dms(rad):
-
-    deg = np.degrees(rad)
-    sign = -1 if deg < 0 else 1
-    deg = abs(deg)
-
-    d = int(deg)
-    m = int((deg - d) * 60)
-    s = (deg - d - m/60) * 3600
-
-    return sign, d, m, s
-
-
-        # From Radians to HMS
-def radians_to_hms(rad):
-
-    rad = rad % (2*np.pi)
-
-    total_hours = np.degrees(rad) / 15
-
-    h = int(total_hours)
-    m = int((total_hours - h) * 60)
-    s = (total_hours - h - m/60) * 3600
-
-    return h, m, s
+useful = UsefulFunctions()
 
 #             --- Main function ---
 
@@ -272,12 +248,17 @@ def main ():
 
     #  --- Solution of the problem --- 
     
+    print("\t########## SOLUTION OF THE PROBLEM ########## \n")
+    print(f"--- Object: {object_name}, Time: {time} (JD) ---\n")
+
     # Solution of the problem for the object at the given time
     M = mean_excentric_anomaly(M_r, time, a, object_name)
     E = eliptic_eccentric_anomaly_newton(M, e)
     r = position_vector(a, e, E)
     theta = true_anomaly(E, e)
     x, y, z = position_vector_cartesian(r, theta, i, Omega, omega)
+
+    print(f"--- Object: Earth, Time: {time} (JD) ---\n")
 
     # Solution of the problem for the Earth at the given time 
     # (to calculate the position of the object with respect to the Earth)
@@ -286,6 +267,8 @@ def main ():
     r_earth = position_vector(orbital_elements["Earth"]["a"], orbital_elements["Earth"]["e"], E_earth)
     theta_earth = true_anomaly(E_earth, orbital_elements["Earth"]["e"])
     x_earth, y_earth, z_earth = position_vector_cartesian(r_earth, theta_earth, orbital_elements["Earth"]["i"], orbital_elements["Earth"]["Omega"], orbital_elements["Earth"]["omega"])
+
+    print(f"--- Position of {object_name} with respect to the Earth ---\n")
 
     # Position of the object with respect to the Earth
     converter = Coords(
@@ -305,8 +288,8 @@ def main ():
 
     r_geo_equ_sph = converter.cartesian_to_spherical(r_geo_equ)
     r = r_geo_equ_sph[0]
-    h, hm, hs = radians_to_hms(r_geo_equ_sph[1])
-    sign, d, dm, ds = radians_to_dms(r_geo_equ_sph[2])
+    h, hm, hs = useful.radians_to_hms(r_geo_equ_sph[1])
+    sign, d, dm, ds = useful.radians_to_dms(r_geo_equ_sph[2])
     string_str = "-" if sign < 0 else "+"
     print(f"Position Vector in Geocentric-Equatorial-Spherical Coordinates: (->r)=[{r:.8f} AU, {h}h {hm}m {hs:.3f}s, {string_str}{d}°{dm}' {ds:.3f}''] \n")
 
