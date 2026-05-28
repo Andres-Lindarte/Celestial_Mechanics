@@ -1,3 +1,38 @@
+"""
+Usage:
+    python orbital_objects.py --object "Earth+Moon" --t_r 2451545.0 --x -0.1771354615 --y 0.9672416229 --z -0.0000039000 --x_speed -0.0172020989 --y_speed -0.0034906585 --z_speed 0.0000000000
+
+Description:
+    This script calculates the orbital elements of a celestial object given its position and velocity vectors at a specific reference time. 
+    The orbital elements calculated include:
+    - Semi-major axis (a)
+    - Eccentricity (e) 
+    - Inclination (i)
+    - Longitude of the ascending node (Omega)
+    - Argument of periapsis (omega)
+    - Mean anomaly (M)
+    - Proper time of periapsis passage (t_0)
+
+    The script can be run with command-line arguments or with manual input. It uses the Gaussian gravitational constant and relative masses of planets to perform the calculations. 
+    The results are printed in a readable format.
+
+    # Manual input:
+    You can give the position and velocity coordinates manually by running the script without arguments. 
+    The script will prompt you to enter the object name, reference time, position coordinates (x, y, z), and velocity components (x_speed, y_speed, z_speed).
+
+    # Command-line arguments:
+    You can use the command-line arguments
+    --object: Name of the planet (e.g., 'Earth+Moon').
+    --t_r: Reference time in Julian days (JD).  
+    --x: x coordinate in au.
+    --y: y coordinate in au.
+    --z: z coordinate in au.
+    --x_speed: x speed in au/dia.
+    --y_speed: y speed in au/dia.
+    --z_speed: z speed in au/dia.
+"""
+
+
 from find_vectors import FindVectors
 import numpy as np
 import argparse
@@ -21,9 +56,7 @@ relative_masses = {
 
 #                    --- Useful functions ---
 
-find_vectors = FindVectors()
-
-class OrbitalObjects:
+class OrbitalObjects(FindVectors): # Inherit from FindVectors to access its methods for vector calculations
 
     """This class contains methods to calculate important orbital elements of celestial objects,
     such as:
@@ -36,35 +69,15 @@ class OrbitalObjects:
     - Proper time of periapsis passage  (t_0)
     
     """
-    def position_vector(self, x, y, z):
-        return find_vectors.position_vector(x, y, z) 
-    # It returns: position, r_magnitude
-
-    def velocity_vector(self, x_speed, y_speed, z_speed):
-        return find_vectors.velocity_vector(x_speed, y_speed, z_speed)
-    # It returns: velocity, v_magnitude
-    
-    def angular_momentum_vector(self, position, velocity):
-        return find_vectors.angular_momentum_vector(position, velocity)
-    # It returns: angular_momentum, h_magnitude
-    
-    def eccentricity_vector(self, planet, position, velocity, r_magnitude, angular_momentum):
-        return find_vectors.eccentricity_vector(planet, position, velocity, r_magnitude, angular_momentum)
-    # It returns: e_vector, e_magnitude
-
     @staticmethod
-    def semi_major_axis(planet, v_magnitude, r_magnitude):
+    def semi_major_axis(object, v_magnitude, r_magnitude):
         # Calculate the semi-major axis (a) using the formula: a = r / (2-Q), where Q = r * v^2 / mu
 
-        Q = r_magnitude * v_magnitude**2 / K**2 / (1 + relative_masses[planet])  # Q = r * v^2 / mu
+        Q = r_magnitude * v_magnitude**2 / K**2 / (1 + relative_masses[object])  # Q = r * v^2 / mu
         a = r_magnitude / (2 - Q)
 
         print(f"Semi-major axis: (a)= {a:.8f} ua \n")
         return a
-
-    def rate_of_change_of_position(self, r_magnitude, position, velocity):
-        return find_vectors.rate_of_change_of_position(r_magnitude, position, velocity)
-    # It returns: dr_dt
 
     @staticmethod
     def mean_anomaly(a, e_magnitude, r_magnitude, dr_dt):
@@ -111,9 +124,9 @@ class OrbitalObjects:
         return omega
     
     @staticmethod
-    def proper_time_of_periapsis_passage(t_r, M, planet, a):
+    def proper_time_of_periapsis_passage(t_r, M, object, a):
         # Calculate the proper time of periapsis passage (t_0) using the formula: t_0 = t_r -M/n, where n is the mean motion (n = sqrt(mu/a^3))
-        mu = K**2 * (1 + relative_masses[planet])  # Standard gravitational parameter for the planet
+        mu = K**2 * (1 + relative_masses[object])  # Standard gravitational parameter for the object
         n = np.sqrt(mu / a**3)  # Mean motion
         t_0 = t_r -M / n
 
@@ -159,7 +172,7 @@ def main():
 
     #   --- Initialize the orbital elements ---
     if args.object is None:
-        x, y, z, x_speed, y_speed, z_speed, planet, t_r = manual_input()
+        x, y, z, x_speed, y_speed, z_speed, object, t_r = manual_input()
 
     else:
         object = args.object
@@ -176,14 +189,14 @@ def main():
     position, r_magnitude = orbital_objects.position_vector(x, y, z)
     velocity, v_magnitude = orbital_objects.velocity_vector(x_speed, y_speed, z_speed)
     angular_momentum, h_magnitude = orbital_objects.angular_momentum_vector(position, velocity)
-    e_vector, e_magnitude = orbital_objects.eccentricity_vector(planet, position, velocity, r_magnitude, angular_momentum)
-    a = orbital_objects.semi_major_axis(planet, v_magnitude, r_magnitude)
+    e_vector, e_magnitude = orbital_objects.eccentricity_vector(object, position, velocity, r_magnitude, angular_momentum)
+    a = orbital_objects.semi_major_axis(object, v_magnitude, r_magnitude)
     dr_dt = orbital_objects.rate_of_change_of_position(r_magnitude, position, velocity) # Auxiliary variable 
     M = orbital_objects.mean_anomaly(a, e_magnitude, r_magnitude, dr_dt)
     i = orbital_objects.inclination(h_magnitude, angular_momentum)
     Omega = orbital_objects.longitude_of_ascending_node(angular_momentum)
     omega = orbital_objects.argument_of_periapsis(e_vector, angular_momentum, h_magnitude)
-    t_0 = orbital_objects.proper_time_of_periapsis_passage
+    t_0 = orbital_objects.proper_time_of_periapsis_passage(t_r, M, object, a)
 
 
 if __name__ == "__main__":

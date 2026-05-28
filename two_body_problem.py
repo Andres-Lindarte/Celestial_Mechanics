@@ -24,7 +24,7 @@ Description:
     --M_r: Mean anomaly of reference (in degrees)
 """
 
-from coordenates import Coords
+from coordinates import Coords
 from useful import UsefulFunctions
 import numpy as np 
 import argparse
@@ -121,7 +121,7 @@ orbital_elements = {
 
 #                --- Useful functions (Solution of the problem) ---
 
-def mean_excentric_anomaly(M_r, t, a, object_name, relative_mass=0):
+def mean_anomaly(M_r, t, a, object_name, relative_mass=0):
     # Calculate the mean anomaly (M) at time t using the formula: M = M_r + n * (t - reference_time)
         # n is the mean motion, calculated as n = K * (180/pi) * sqrt((1 + relative_mass) / a^3)
     if object_name in relative_masses:
@@ -253,7 +253,7 @@ def main ():
     print(f"--- Object: {object_name}, Time: {time} (JD) ---\n")
 
     # Solution of the problem for the object at the given time
-    M = mean_excentric_anomaly(M_r, time, a, object_name)
+    M = mean_anomaly(M_r, time, a, object_name)
     E = eliptic_eccentric_anomaly_newton(M, e)
     r = position_vector(a, e, E)
     theta = true_anomaly(E, e)
@@ -263,7 +263,7 @@ def main ():
 
     # Solution of the problem for the Earth at the given time 
     # (to calculate the position of the object with respect to the Earth)
-    M_earth = mean_excentric_anomaly(orbital_elements["Earth"]["M_r"], time, orbital_elements["Earth"]["a"], "Earth")
+    M_earth = mean_anomaly(orbital_elements["Earth"]["M_r"], time, orbital_elements["Earth"]["a"], "Earth")
     E_earth = eliptic_eccentric_anomaly_newton(M_earth, orbital_elements["Earth"]["e"])
     r_earth = position_vector(orbital_elements["Earth"]["a"], orbital_elements["Earth"]["e"], E_earth)
     theta_earth = true_anomaly(E_earth, orbital_elements["Earth"]["e"])
