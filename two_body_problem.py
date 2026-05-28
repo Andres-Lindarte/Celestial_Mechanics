@@ -135,7 +135,7 @@ class TwoBodyProblem:
         self.object_name = object_name
         self.a = orbital_elements["a"]
         self.e = orbital_elements["e"]
-        self.i = orbital_elements["i"]
+        self.i = np.radians(orbital_elements["i"])
         self.Omega = np.radians(orbital_elements["Omega"])
         self.omega = np.radians(orbital_elements["omega"])
         self.M_r = np.radians(orbital_elements["M_r"])
@@ -148,17 +148,14 @@ class TwoBodyProblem:
     def mean_anomaly(self, t):
         # Calculate the mean anomaly (M) at time t using the formula: M = M_r + n * (t - reference_time)
             # n is the mean motion, calculated as n = K * (180/pi) * sqrt((1 + relative_mass) / a^3)
-        if self.object_name in relative_masses:
-            relative_mass = relative_masses[self.object_name]
-        else:
-            relative_mass = self.relative_mass
         
-        M = self.M_r + self.n * (t - self.t_r)
+        M_rad = self.M_r + self.n * (t - self.t_r)
+        M_deg = np.degrees(M_rad) % 360  # Convert to degrees and ensure it's between 0 and 360
 
         if self.verbose:
-            print(f"Mean Anomaly: (M)= {M:.8f}° \n")
+            print(f"Mean Anomaly: (M)= {M_deg:.8f}° \n")
             
-        return M
+        return M_deg
 
     def eliptic_eccentric_anomaly_newton(self, M_deg, tolerance=1e-8):
         # Solves the Kepler equation for the elipctic case using the Newton-Raphson method 
@@ -293,11 +290,11 @@ def main ():
     print(f"--- Object: {object_name}, Time: {time} (JD) ---\n")
 
     # Solution of the problem for the object at the given time
-    orbital_elements = {"a": a, "e": e, "i": i, "Omega": Omega, "omega": omega, "M_r": M_r}
+    object_elements = {"a": a, "e": e, "i": i, "Omega": Omega, "omega": omega, "M_r": M_r}
 
     object_solution = TwoBodyProblem(
                     object_name=object_name, 
-                    orbital_elements=orbital_elements, 
+                    orbital_elements=object_elements, 
                     relative_mass=relative_masses.get(object_name, 0), 
                     reference_time=reference_time)
 
@@ -310,7 +307,7 @@ def main ():
     earth_solution = TwoBodyProblem(
                     object_name="Earth", 
                     orbital_elements=orbital_elements["Earth"], 
-                    relative_mass=relative_masses["Earth"], 
+                    relative_mass=relative_masses["Earth+Moon"], 
                     reference_time=reference_time)
     
     M_earth, E_earth, r_earth, theta_earth, x_earth, y_earth, z_earth = earth_solution.general_solution(time)
