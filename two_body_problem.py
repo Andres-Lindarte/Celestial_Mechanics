@@ -119,70 +119,110 @@ orbital_elements = {
                 },
 }
 
-#                --- Useful functions (Solution of the problem) ---
+#                --- Solution of the problem ---
 
-def mean_anomaly(M_r, t, a, object_name, relative_mass=0):
-    # Calculate the mean anomaly (M) at time t using the formula: M = M_r + n * (t - reference_time)
-        # n is the mean motion, calculated as n = K * (180/pi) * sqrt((1 + relative_mass) / a^3)
-    if object_name in relative_masses:
-        relative_mass = relative_masses[object_name]
-    n = K * (180/np.pi) * np.sqrt((1 + relative_mass) / a**3)
-    
-    M = M_r + n * (t - reference_time)
-    print(f"Mean Anomaly: (M)= {M:.8f}° \n")
-    return M
+class TwoBodyProblem:
 
-def eliptic_eccentric_anomaly_newton(M_deg, e, tolerance=1e-8):
-    # Solves the Kepler equation for the elipctic case using the Newton-Raphson method 
-    # to find the eccentric anomaly (E) given the mean anomaly (M) and eccentricity (e).
-    M_rad = np.radians(M_deg)
-    E_rad = M_rad  # Initial value
+    """
+    This class contains methods to solve the two-body problem, which describes the motion of two
+    celestial bodies under their mutual gravitational attraction. It includes methods to calculate the
+    position and velocity vectors of the object, as well as its orbital elements.
+    """
     
-    while True:
-        # f(E) = E - e*sin(E) - M
-        f_E = E_rad - e * np.sin(E_rad) - M_rad
-        # Derivada: f'(E) = 1 - e*cos(E)
-        f_prime_E = 1 - e * np.cos(E_rad)
+    def __init__(self, object_name, verbose=True, orbital_elements=None, relative_mass=0, reference_time=0):
         
-        # Newton-Raphson
-        E_new = E_rad - (f_E / f_prime_E)
-        if abs(E_new - E_rad) < tolerance:
-            break
-        E_rad = E_new
+        self.verbose = verbose
+        self.object_name = object_name
+        self.a = orbital_elements["a"]
+        self.e = orbital_elements["e"]
+        self.i = orbital_elements["i"]
+        self.Omega = np.radians(orbital_elements["Omega"])
+        self.omega = np.radians(orbital_elements["omega"])
+        self.M_r = np.radians(orbital_elements["M_r"])
+        self.relative_mass = relative_mass
+        self.t_r = reference_time
+
+        mu = (K**2) * (1 + self.relative_mass)  # Gravitational parameter
+        self.n = np.sqrt(mu/ (self.a**3))
+
+    def mean_anomaly(self, t):
+        # Calculate the mean anomaly (M) at time t using the formula: M = M_r + n * (t - reference_time)
+            # n is the mean motion, calculated as n = K * (180/pi) * sqrt((1 + relative_mass) / a^3)
+        if self.object_name in relative_masses:
+            relative_mass = relative_masses[self.object_name]
+        else:
+            relative_mass = self.relative_mass
         
-    E_deg = np.degrees(E_rad)
-    print(f"Eccentric Anomaly: (E) = {E_deg:.8f}° \n")
-    return E_deg
+        M = self.M_r + self.n * (t - self.t_r)
 
+        if self.verbose:
+            print(f"Mean Anomaly: (M)= {M:.8f}° \n")
+            
+        return M
 
-def position_vector(a, e, E):
-    # Calculate the position vector (r) using the formula: r = a * (1 - e * cos(E))
-    r = a * (1 - e * np.cos(np.radians(E)))
-    print(f"Position Vector: (r)= {r:.8f} au \n")
-    return r
+    def eliptic_eccentric_anomaly_newton(self, M_deg, tolerance=1e-8):
+        # Solves the Kepler equation for the elipctic case using the Newton-Raphson method 
+        # to find the eccentric anomaly (E) given the mean anomaly (M) and eccentricity (e).
+        M_rad = np.radians(M_deg)
+        E_rad = M_rad  # Initial value
+        
+        while True:
+            # f(E) = E - e*sin(E) - M
+            f_E = E_rad - self.e * np.sin(E_rad) - M_rad
+            # Derivada: f'(E) = 1 - e*cos(E)
+            f_prime_E = 1 - self.e * np.cos(E_rad)
+            
+            # Newton-Raphson
+            E_new = E_rad - (f_E / f_prime_E)
+            if abs(E_new - E_rad) < tolerance:
+                break
+            E_rad = E_new
+            
+        E_deg = np.degrees(E_rad)
+        if self.verbose:
+            print(f"Eccentric Anomaly: (E) = {E_deg:.8f}° \n")
+        return E_deg
 
-def true_anomaly(E, e):
-    # Calculate the true anomaly (theta) using the formula: 
-    # theta = 2 * atan2(sqrt((1 + e)/(1-e)) * tan2(E/2))
-    theta = 2 * np.arctan(np.sqrt((1 + e)/(1-e)) * np.tan(np.radians(E) / 2))
-    print(f"True Anomaly: (theta)= {np.degrees(theta):.8f}° \n")
-    return theta
+    def position_vector(self, E):
+        # Calculate the position vector (r) using the formula: r = a * (1 - e * cos(E))
+        r = self.a * (1 - self.e * np.cos(np.radians(E)))
+        if self.verbose:
+            print(f"Position Vector: (r)= {r:.8f} au \n")
+        return r
 
-def position_vector_cartesian(r, theta, i, Omega, omega):
-    # Calculate the position vector in Cartesian coordinates (x, y, z) using the formulas:
-    # x = r * (cos(Omega) * cos(theta + omega) - sin(Omega) * sin(theta + omega) * cos(i))
-    # y = r * (sin(Omega) * cos(theta + omega) + cos(Omega) * sin(theta + omega) * cos(i))
-    # z = r * (sin(theta + omega) * sin(i))
-    x = r * (np.cos(np.radians(Omega)) * np.cos(theta + np.radians(omega)) - 
-             np.sin(np.radians(Omega)) * np.sin(theta + np.radians(omega)) * np.cos(np.radians(i)))
-    
-    y = r * (np.sin(np.radians(Omega)) * np.cos(theta + np.radians(omega)) + 
-             np.cos(np.radians(Omega)) * np.sin(theta + np.radians(omega)) * np.cos(np.radians(i)))
-    
-    z = r * (np.sin(theta + np.radians(omega)) * np.sin(np.radians(i)))
-    
-    print(f"Position Vector in Heliocentric-Ecliptical-Cartesian Coordinates: (->r)=[{x:.8f}, {y:.8f}, {z:.8f}] au \n")
-    return x, y, z
+    def true_anomaly(self, E):
+        # Calculate the true anomaly (theta) using the formula: 
+        # theta = 2 * atan2(sqrt((1 + e)/(1-e)) * tan2(E/2))
+        theta = 2 * np.arctan2(np.sqrt((1 + self.e)/(1-self.e)) * np.tan(np.radians(E) / 2), 1)
+        if self.verbose:
+            print(f"True Anomaly: (theta)= {np.degrees(theta):.8f}° \n")
+        return theta
+
+    def position_vector_cartesian(self, r, theta):
+        # Calculate the position vector in Cartesian coordinates (x, y, z) using the formulas:
+        # x = r * (cos(Omega) * cos(theta + omega) - sin(Omega) * sin(theta + omega) * cos(i))
+        # y = r * (sin(Omega) * cos(theta + omega) + cos(Omega) * sin(theta + omega) * cos(i))
+        # z = r * (sin(theta + omega) * sin(i))
+        x = r * (np.cos(self.Omega) * np.cos(theta + self.omega) - 
+                np.sin(self.Omega) * np.sin(theta + self.omega) * np.cos(self.i))
+        
+        y = r * (np.sin(self.Omega) * np.cos(theta + self.omega) + 
+                np.cos(self.Omega) * np.sin(theta + self.omega) * np.cos(self.i))
+        
+        z = r * (np.sin(theta + self.omega) * np.sin(self.i))
+        
+        if self.verbose:
+            print(f"Position Vector in Heliocentric-Ecliptical-Cartesian Coordinates: (->r)=[{x:.8f}, {y:.8f}, {z:.8f}] au \n")
+        return x, y, z
+
+    def general_solution (self, t):
+        M = self.mean_anomaly(t)
+        E = self.eliptic_eccentric_anomaly_newton(M)
+        r = self.position_vector(E)
+        theta = self.true_anomaly(E)
+        x, y, z = self.position_vector_cartesian(r, theta)
+
+        return M, E, r, theta, x, y, z
 
 #                --- Useful functions (Manual Input) ---
 
@@ -249,25 +289,31 @@ def main ():
         time = args.time
 
     #  --- Solution of the problem --- 
-    
+
     print(f"--- Object: {object_name}, Time: {time} (JD) ---\n")
 
     # Solution of the problem for the object at the given time
-    M = mean_anomaly(M_r, time, a, object_name)
-    E = eliptic_eccentric_anomaly_newton(M, e)
-    r = position_vector(a, e, E)
-    theta = true_anomaly(E, e)
-    x, y, z = position_vector_cartesian(r, theta, i, Omega, omega)
+    orbital_elements = {"a": a, "e": e, "i": i, "Omega": Omega, "omega": omega, "M_r": M_r}
+
+    object_solution = TwoBodyProblem(
+                    object_name=object_name, 
+                    orbital_elements=orbital_elements, 
+                    relative_mass=relative_masses.get(object_name, 0), 
+                    reference_time=reference_time)
+
+    M, E, r, theta, x, y, z = object_solution.general_solution(time)
 
     print(f"--- Object: Earth, Time: {time} (JD) ---\n")
 
     # Solution of the problem for the Earth at the given time 
     # (to calculate the position of the object with respect to the Earth)
-    M_earth = mean_anomaly(orbital_elements["Earth"]["M_r"], time, orbital_elements["Earth"]["a"], "Earth")
-    E_earth = eliptic_eccentric_anomaly_newton(M_earth, orbital_elements["Earth"]["e"])
-    r_earth = position_vector(orbital_elements["Earth"]["a"], orbital_elements["Earth"]["e"], E_earth)
-    theta_earth = true_anomaly(E_earth, orbital_elements["Earth"]["e"])
-    x_earth, y_earth, z_earth = position_vector_cartesian(r_earth, theta_earth, orbital_elements["Earth"]["i"], orbital_elements["Earth"]["Omega"], orbital_elements["Earth"]["omega"])
+    earth_solution = TwoBodyProblem(
+                    object_name="Earth", 
+                    orbital_elements=orbital_elements["Earth"], 
+                    relative_mass=relative_masses["Earth"], 
+                    reference_time=reference_time)
+    
+    M_earth, E_earth, r_earth, theta_earth, x_earth, y_earth, z_earth = earth_solution.general_solution(time)
 
     print(f"--- Position of {object_name} with respect to the Earth ---\n")
 
