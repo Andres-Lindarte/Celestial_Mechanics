@@ -229,6 +229,8 @@ def main ():
     parser.add_argument('--M_r', type=float, help='Mean anomaly of reference (in degrees)')
     args = parser.parse_args()
 
+    print("\t########## SOLUTION OF THE TWO-BODY PROBLEM ########## \n")
+
     #   --- Initialize the orbital elements ---
     if args.object is None:
         object_name, a, e, i, Omega, omega, M_r = manual_input()
@@ -248,7 +250,6 @@ def main ():
 
     #  --- Solution of the problem --- 
     
-    print("\t########## SOLUTION OF THE PROBLEM ########## \n")
     print(f"--- Object: {object_name}, Time: {time} (JD) ---\n")
 
     # Solution of the problem for the object at the given time
