@@ -127,8 +127,8 @@ class OrbitalObjects(FindVectors): # Inherit from FindVectors to access its meth
     def proper_time_of_periapsis_passage(t_r, M, object, a):
         # Calculate the proper time of periapsis passage (t_0) using the formula: t_0 = t_r -M/n, where n is the mean motion (n = sqrt(mu/a^3))
         mu = K**2 * (1 + relative_masses[object])  # Standard gravitational parameter for the object
-        n = np.sqrt(mu / a**3)  # Mean motion
-        t_0 = t_r -M / n
+        n = (180/np.pi) * np.sqrt(mu / a**3)  # Mean motion
+        t_0 = t_r - (M / n)
 
         print(f"Proper time of periapsis passage: (t_0)= {t_0:.8f} JD \n")
         return t_0
