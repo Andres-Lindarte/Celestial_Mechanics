@@ -22,6 +22,7 @@ Description:
     --Omega: Longitude of the ascending node (in degrees)
     --omega: Argument of periapsis (in degrees)
     --M_r: Mean anomaly of reference (in degrees)
+    --reference_time: Reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC)
 """
 
 from coordinates import Coords
@@ -236,6 +237,7 @@ def manual_input():
         Omega = float(input("\nEnter the longitude of the ascending node (Omega) (in degrees):\n"))
         omega = float(input("\nEnter the argument of periapsis (omega) (in degrees):\n"))
         M_r = float(input("\nEnter the mean anomaly of reference (M_r) (in degrees):\n"))
+        reference_time = float(input("\nEnter the reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC):\n"))
 
     else:
         a = orbital_elements[object_name]["a"]
@@ -245,7 +247,7 @@ def manual_input():
         omega = orbital_elements[object_name]["omega"]
         M_r = orbital_elements[object_name]["M_r"]
 
-    return object_name, a, e, i, Omega, omega, M_r
+    return object_name, a, e, i, Omega, omega, M_r, reference_time
 
 #              --- Useful functions (converters) ---
 
@@ -264,13 +266,14 @@ def main ():
     parser.add_argument('--Omega', type=float, help='Longitude of the ascending node (in degrees)')
     parser.add_argument('--omega', type=float, help='Argument of periapsis (in degrees)')
     parser.add_argument('--M_r', type=float, help='Mean anomaly of reference (in degrees)')
+    parser.add_argument('--reference_time', type=float, help='Reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC)')
     args = parser.parse_args()
 
     print("\t########## SOLUTION OF THE TWO-BODY PROBLEM ########## \n")
 
     #   --- Initialize the orbital elements ---
     if args.object is None:
-        object_name, a, e, i, Omega, omega, M_r = manual_input()
+        object_name, a, e, i, Omega, omega, M_r , reference_time_manual = manual_input()
     else:
         object_name = args.object
         a = args.a if args.a is not None else orbital_elements[object_name]["a"]
@@ -279,7 +282,8 @@ def main ():
         Omega = args.Omega if args.Omega is not None else orbital_elements[object_name]["Omega"]
         omega = args.omega if args.omega is not None else orbital_elements[object_name]["omega"]
         M_r = args.M_r if args.M_r is not None else orbital_elements[object_name]["M_r"]
-
+        reference_time = args.reference_time if args.reference_time is not None else reference_time_manual
+    
     if args.time is None:
         time = float(input("\nEnter the time in Julian Date (e.g., 2461174.5 for May 14,2026 0h UTC):\n"))
     else:        
