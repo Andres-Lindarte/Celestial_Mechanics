@@ -1,3 +1,24 @@
+"""
+Description:
+    This code is not excecutable by its onw.
+    This code gathers useful constants:
+    - Gaussian gravitational constant (K)
+    - Relative masses of the planets with respect to the Sun
+    - Orbital elements of the planets for May 14,2026 0h UTC
+
+    It also provides a class with useful functions for celestial mechanics calculations, 
+    including methods for:
+    - Verifying input values: 
+        - verify_1or2: Ensures the input is either 1 or 2.
+        - verify_coords: Ensures the input is a size 3 vector.
+        - verify_dms: Ensures the input degrees, arcminutes, and arcseconds are within valid ranges.
+        - verify_hms: Ensures the input hours, minutes, and seconds are within valid ranges.
+    - Converting between different coordinate systems:
+        - dms_to_degrees: Converts degrees, arcminutes, and arcseconds to decimal degrees.
+        - hms_to_degrees: Converts hours, minutes, and seconds to decimal degrees.
+        - radians_to_dms: Converts radians to degrees, arcminutes, and arcseconds.
+"""
+
 import numpy as np
 
 #                   --- Useful quantities ---

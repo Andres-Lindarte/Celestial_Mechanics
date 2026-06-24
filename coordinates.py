@@ -1,3 +1,19 @@
+"""
+Usage: 
+    python coordinates.py
+
+Description:
+    This code provides a set of functions and classes for handling 
+    celestial coordinates and transformations between different coordinate.
+    It allows convertions between:
+    - Origins: Heliocentric / Geocentric
+    - Planes: Ecliptic / Equatorial
+    - Types: Cartesian / Spherical
+
+    The code only allows manual input from the user 
+    (it does not use command line arguments, since its complexity, KISS principle).
+"""
+
 from useful import UsefulFunctions, EPSILON
 import numpy as np
 
