@@ -26,99 +26,12 @@ Description:
 """
 
 from coordinates import Coords
-from useful import UsefulFunctions
+from useful import UsefulFunctions, K, RELATIVE_MASSES, ORBITAL_ELEMENTS
 import numpy as np 
 import argparse
 
-# Gaussian gravitational constant in au^(3/2)/dia
-K = 0.01720209908  
-# Inclination of the ecliptic from the celestial equator
-EPSILON = np.radians(23.43927944)  # 23° 26' 21.406'' 
 # Reference time "May 14,2026 0h UTC (JD 2461174.5)"
-reference_time = 2461174.5
-
-#                  --- Useful directories ---     
-
-# Relative masses of the planets with respect to the Sun
-relative_masses = {
-    "Mercury": 1/6023600,
-    "Venus": 1/408523.71,
-    "Earth+Moon": 1/328900.56,
-    "Mars": 1/3098708.0,
-    "Jupiter": 1/1047.3486,
-    "Saturn": 1/3497.898,
-    "Uranus": 1/22902.98,
-    "Neptune": 1/19412.24,
-}
-
-# Orbital elements of the planets for May 14,2026 0h UTC (JD 2461174.5)
-"""
-a : Semi-major axis (in astronomical units, au)
-e : Eccentricity (dimensionless)
-i : Inclination (in degrees)
-Omega : Longitude of the ascending node (in degrees)
-omega : Argument of periapsis (in degrees)
-M_r : Mean anomaly of reference (in degrees)
-"""
-orbital_elements = {
-    "Mercury": {"a": 0.38709817, 
-                "e": 0.20563319,
-                "i": 7.00338683,
-                "Omega": 48.29789723,
-                "omega": 29.20193758,
-                "M_r": 341.92845078
-                },
-    "Venus": {"a": 0.72333150, 
-              "e": 0.00679081,
-              "i": 3.39437486,
-              "Omega": 76.60678210,
-              "omega": 54.87676238,
-              "M_r": 358.21130004
-              },
-    # Earth + Moon 
-    "Earth": {"a": 1.00074332,
-              "e": 0.01639114,
-              "i": 0.00284898,
-              "Omega": 146.48865232,
-              "omega": 318.95788506,
-              "M_r": 125.91233118
-                },
-    "Mars": {"a": 1.52362081,
-             "e": 0.09343917,
-             "i": 1.84749141,
-             "Omega": 49.48112365,
-             "omega": 286.61454328,
-             "M_r": 25.52866375
-                },
-    "Jupiter": {"a": 5.20182186,
-                "e": 0.04825346,
-                "i": 1.30379948,
-                "Omega": 100.52125276,
-                "omega": 273.38083997,
-                "M_r": 100.59906410
-                },
-    "Saturn": {"a": 9.54167409,
-               "e": 0.05515038,
-               "i": 2.48823401,
-               "Omega": 113.65630093,
-               "omega": 338.54518281,
-               "M_r": 280.13785163
-                },
-    "Uranus": {"a": 19.27448311,
-               "e": 0.04721564,
-               "i": 0.77202058,
-               "Omega": 74.02932312,
-               "omega": 91.83592007,
-               "M_r": 255.18851944
-                },
-    "Neptune": {"a": 30.09568563,
-                "e": 0.01050175,
-                "i": 1.77110623,
-                "Omega": 131.82116887,
-                "omega": 277.76383938,
-                "M_r": 312.22914269
-                },
-}
+REFERENCE_TIME = 2461174.5
 
 #                --- Solution of the problem ---
 
@@ -213,14 +126,42 @@ class TwoBodyProblem:
             print(f"Position Vector in Heliocentric-Ecliptical-Cartesian Coordinates: (->r)=[{x:.8f}, {y:.8f}, {z:.8f}] au \n")
         return x, y, z
 
+    def velocity_vector_cartesian(self, r, theta):
+        # Calculate the velocity vector in Cartesian coordinates (vx, vy, vz) using the formulas:
+        # vx = S_11 (r_dot * cos(theta) - r * theta_dot * sin(theta)) + S_12 (r_dot * sin(theta) + r * theta_dot * cos(theta)
+        # vy = S_21 (r_dot * cos(theta) - r * theta_dot * sin(theta)) + S_22 (r_dot * sin(theta) + r * theta_dot * cos(theta))
+        # vz = S_31 (r_dot * cos(theta) - r * theta_dot * sin(theta)) + S_32 (r_dot * sin(theta) + r * theta_dot * cos(theta))
+        # where S_ij are the elements of the transformation matrix from perifocal to ecliptic coordinates, r_dot is the radial velocity, and theta_dot is the angular velocity
+        # r_dot = (K * sqrt(1 + relative_mass) * e* sin(theta))/(sqrt(a * (1 - e^2)))
+        # theta_dot = ((K * sqrt(1 + relative_mass) * (sqrt(a * (1 - e^2)) / (r^2)))
+        r_dot = (K * np.sqrt(1 + self.relative_mass) * self.e * np.sin(theta)) / (np.sqrt(self.a * (1 - self.e**2)))
+        theta_dot = (K * np.sqrt(1 + self.relative_mass) * (np.sqrt(self.a * (1 - self.e**2)) / (r**2)))
+
+        S_11 = np.cos(self.Omega) * np.cos(self.omega) - np.sin(self.Omega) * np.sin(self.omega) * np.cos(self.i)
+        S_12 = -np.cos(self.Omega) * np.sin(self.omega) - np.sin(self.Omega) * np.cos(self.omega) * np.cos(self.i)
+        S_21 = np.sin(self.Omega) * np.cos(self.omega) + np.cos(self.Omega) * np.sin(self.omega) * np.cos(self.i)
+        S_22 = -np.sin(self.Omega) * np.sin(self.omega) + np.cos(self.Omega) * np.cos(self.omega) * np.cos(self.i)
+        S_31 = np.sin(self.omega) * np.sin(self.i)
+        S_32 = np.cos(self.omega) * np.sin(self.i)
+
+        vx = S_11 * (r_dot * np.cos(theta) - r * theta_dot * np.sin(theta)) + S_12 * (r_dot * np.sin(theta) + r * theta_dot * np.cos(theta))
+        vy = S_21 * (r_dot * np.cos(theta) - r * theta_dot * np.sin(theta)) + S_22 * (r_dot * np.sin(theta) + r * theta_dot * np.cos(theta))
+        vz = S_31 * (r_dot * np.cos(theta) - r * theta_dot * np.sin(theta)) + S_32 * (r_dot * np.sin(theta) + r * theta_dot * np.cos(theta))
+
+        if self.verbose:
+            print(f"Velocity Vector in Heliocentric-Ecliptical-Cartesian Coordinates: (->v)= [{vx:.8f}, {vy:.8f}, {vz:.8f}] au/dia \n")
+            print(f"Velocity Magnitude: (v)= {r_dot:.8f} au/dia \n")
+        return vx, vy, vz, r_dot
+
     def general_solution (self, t):
         M = self.mean_anomaly(t)
         E = self.eliptic_eccentric_anomaly_newton(M)
         r = self.position_vector(E)
         theta = self.true_anomaly(E)
         x, y, z = self.position_vector_cartesian(r, theta)
+        vx, vy, vz, v = self.velocity_vector_cartesian(r, theta)
 
-        return M, E, r, theta, x, y, z
+        return M, E, r, theta, x, y, z, vx, vy, vz, v
 
 #                --- Useful functions (Manual Input) ---
 
@@ -229,7 +170,7 @@ def manual_input():
     print("\t--- MANUAL INPUT ---")
     object_name = input("\nEnter the name of the object in the solar system (e.g., Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune):\n")
 
-    if object_name not in orbital_elements:
+    if object_name not in ORBITAL_ELEMENTS:
         print(f"Object '{object_name}' is not in the database.")
         a = float(input("\nEnter the semi-major axis (a) (in astronomical units, au):\n"))
         e = float(input("\nEnter the eccentricity (e) (dimensionless):\n"))
@@ -240,12 +181,12 @@ def manual_input():
         reference_time = float(input("\nEnter the reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC):\n"))
 
     else:
-        a = orbital_elements[object_name]["a"]
-        e = orbital_elements[object_name]["e"]
-        i = orbital_elements[object_name]["i"]
-        Omega = orbital_elements[object_name]["Omega"]
-        omega = orbital_elements[object_name]["omega"]
-        M_r = orbital_elements[object_name]["M_r"]
+        a = ORBITAL_ELEMENTS[object_name]["a"]
+        e = ORBITAL_ELEMENTS[object_name]["e"]
+        i = ORBITAL_ELEMENTS[object_name]["i"]
+        Omega = ORBITAL_ELEMENTS[object_name]["Omega"]
+        omega = ORBITAL_ELEMENTS[object_name]["omega"]
+        M_r = ORBITAL_ELEMENTS[object_name]["M_r"]
 
     return object_name, a, e, i, Omega, omega, M_r, reference_time
 
@@ -273,16 +214,16 @@ def main ():
 
     #   --- Initialize the orbital elements ---
     if args.object is None:
-        object_name, a, e, i, Omega, omega, M_r , reference_time_manual = manual_input()
+        object_name, a, e, i, Omega, omega, M_r , reference_time = manual_input()
     else:
         object_name = args.object
-        a = args.a if args.a is not None else orbital_elements[object_name]["a"]
-        e = args.e if args.e is not None else orbital_elements[object_name]["e"]
-        i = args.i if args.i is not None else orbital_elements[object_name]["i"]
-        Omega = args.Omega if args.Omega is not None else orbital_elements[object_name]["Omega"]
-        omega = args.omega if args.omega is not None else orbital_elements[object_name]["omega"]
-        M_r = args.M_r if args.M_r is not None else orbital_elements[object_name]["M_r"]
-        reference_time = args.reference_time if args.reference_time is not None else reference_time_manual
+        a = args.a if args.a is not None else ORBITAL_ELEMENTS[object_name]["a"]
+        e = args.e if args.e is not None else ORBITAL_ELEMENTS[object_name]["e"]
+        i = args.i if args.i is not None else ORBITAL_ELEMENTS[object_name]["i"]
+        Omega = args.Omega if args.Omega is not None else ORBITAL_ELEMENTS[object_name]["Omega"]
+        omega = args.omega if args.omega is not None else ORBITAL_ELEMENTS[object_name]["omega"]
+        M_r = args.M_r if args.M_r is not None else ORBITAL_ELEMENTS[object_name]["M_r"]
+        reference_time = args.reference_time if args.reference_time is not None else REFERENCE_TIME 
     
     if args.time is None:
         time = float(input("\nEnter the time in Julian Date (e.g., 2461174.5 for May 14,2026 0h UTC):\n"))
@@ -299,10 +240,10 @@ def main ():
     object_solution = TwoBodyProblem(
                     object_name=object_name, 
                     orbital_elements=object_elements, 
-                    relative_mass=relative_masses.get(object_name, 0), 
+                    relative_mass=RELATIVE_MASSES.get(object_name, 0), 
                     reference_time=reference_time)
 
-    M, E, r, theta, x, y, z = object_solution.general_solution(time)
+    M, E, r, theta, x, y, z, vx, vy, vz, v = object_solution.general_solution(time)
 
     print(f"--- Object: Earth, Time: {time} (JD) ---\n")
 
@@ -310,11 +251,11 @@ def main ():
     # (to calculate the position of the object with respect to the Earth)
     earth_solution = TwoBodyProblem(
                     object_name="Earth", 
-                    orbital_elements=orbital_elements["Earth"], 
-                    relative_mass=relative_masses["Earth+Moon"], 
+                    orbital_elements=ORBITAL_ELEMENTS["Earth"], 
+                    relative_mass=RELATIVE_MASSES["Earth+Moon"], 
                     reference_time=reference_time)
     
-    M_earth, E_earth, r_earth, theta_earth, x_earth, y_earth, z_earth = earth_solution.general_solution(time)
+    M_earth, E_earth, r_earth, theta_earth, x_earth, y_earth, z_earth, vx_earth, vy_earth, vz_earth , v_earth = earth_solution.general_solution(time)
 
     print(f"--- Position of {object_name} with respect to the Earth ---\n")
 

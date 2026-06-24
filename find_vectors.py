@@ -1,22 +1,5 @@
-from useful import UsefulFunctions
+from useful import UsefulFunctions, K, RELATIVE_MASSES 
 import numpy as np
-
-# Gaussian gravitational constant in au^(3/2)/dia
-k = 0.01720209908  
-
-#                    --- Useful directories---
-
-relative_masses = {
-    # Relative masses of the planets with respect to the Sun
-    "Mercury": 1/6023600,
-    "Venus": 1/408523.71,
-    "Earth+Moon": 1/328900.56,
-    "Mars": 1/3098708.0,
-    "Jupiter": 1/1047.3486,
-    "Saturn": 1/3497.898,
-    "Uranus": 1/22902.98,
-    "Neptune": 1/19412.24,
-}
 
 #                    --- Useful funtions ---
     
@@ -91,7 +74,7 @@ class FindVectors:
     @staticmethod
     def eccentricity_vector (planet, position, velocity, r_magnitude, angular_momentum):
         # Calculate the eccentricity vector (e) using the formula: e = -(h x v) / mu - (->r) / r
-        mu = k**2 * (1 + relative_masses[planet])  # Standard gravitational parameter for the planet
+        mu = K**2 * (1 + RELATIVE_MASSES[planet])  # Standard gravitational parameter for the planet
         e_vector = -(np.cross(angular_momentum, velocity) / mu) - (position / r_magnitude)
         e_magnitude = np.linalg.norm(e_vector)
         print(f"Eccentricity Vector: (->e)=[{e_vector[0]:.8f}, {e_vector[1]:.8f}, {e_vector[2]:.8f}]     \n (e)= {e_magnitude:.8f} \n")
@@ -100,7 +83,7 @@ class FindVectors:
     @staticmethod
     def total_energy_per_unit_mass (planet, v_magnitude, r_magnitude):
         # Calculate the total energy per unit mass (E) using the formula: E_mass = (v^2)/2 - mu/r
-        mu = k**2 * (1 + relative_masses[planet])  # Standard gravitational parameter for the planet
+        mu = K**2 * (1 + RELATIVE_MASSES[planet])  # Standard gravitational parameter for the planet
         E_mass = (v_magnitude**2) / 2 - mu / r_magnitude
         print(f"Total Energy per Unit Mass: (E)= {E_mass:.8f} ua^2/dia^2 \n")
         return E_mass
@@ -115,7 +98,7 @@ def main():
     print("\t--- IMPORTANT VECTORS ---\n")
     print("Choose the planet for the calculations:")
     planet = input("Planet: ")
-    if planet not in relative_masses:
+    if planet not in RELATIVE_MASSES:
         print("Invalid planet name. Please choose from the following: Mercury, Venus, Earth+Moon, Mars, Jupiter, Saturn, Uranus, Neptune.")
         exit()
 

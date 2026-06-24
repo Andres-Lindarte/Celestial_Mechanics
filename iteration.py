@@ -26,7 +26,8 @@ Description:
 
 """
 
-from two_body_problem import TwoBodyProblem, orbital_elements, relative_masses, reference_time, K
+from useful import K, RELATIVE_MASSES, ORBITAL_ELEMENTS
+from two_body_problem import TwoBodyProblem, REFERENCE_TIME
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
@@ -56,13 +57,13 @@ def plot_orbit(object_name, time, steps):
     x_values , y_values, z_values = [], [], []
 
     # Calculates the period of the object using the formula: T = 2 * pi * sqrt(a^3 / (K^2 * (1 + relative_mass)))
-    T = 2 * np.pi * np.sqrt(orbital_elements[object_name]["a"]**3 / (K**2 * (1 + relative_masses[object_name])))
+    T = 2 * np.pi * np.sqrt(ORBITAL_ELEMENTS[object_name]["a"]**3 / (K**2 * (1 + RELATIVE_MASSES[object_name])))
 
     object_solution = TwoBodyProblem(
         object_name=object_name, 
-        orbital_elements=orbital_elements[object_name], 
-        relative_mass=relative_masses.get(object_name, 0), 
-        reference_time=reference_time,
+        orbital_elements=ORBITAL_ELEMENTS[object_name], 
+        relative_mass=RELATIVE_MASSES.get(object_name, 0), 
+        reference_time=REFERENCE_TIME,
         verbose=False)
     
     for t in np.linspace(time, time + T, steps):

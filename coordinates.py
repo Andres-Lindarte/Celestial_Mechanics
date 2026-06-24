@@ -1,8 +1,5 @@
-from useful import UsefulFunctions
+from useful import UsefulFunctions, EPSILON
 import numpy as np
-
-# Obliquity of the ecliptic at J2000.0
-EPSILON = np.radians(23.43927944)  # 23° 26' 21.406''
 
 useful = UsefulFunctions()
 
