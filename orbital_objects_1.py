@@ -3,7 +3,11 @@ Usage:
     python orbital_objects.py --object "Earth+Moon" --t_r 2451545.0 --x -0.1771354615 --y 0.9672416229 --z -0.0000039000 --x_speed -0.0172020989 --y_speed -0.0034906585 --z_speed 0.0000000000
 
 Description:
-    This script calculates the orbital elements of a celestial object given its position and velocity vectors at a specific reference time. 
+    This script calculates the orbital elements of a celestial object with ELIPTICAL orbit
+    given its POSITION and VELOCITY vectors at a specific reference time. 
+    It only works for the planets in the solar system, but you can add other objects by adding 
+    their relative mass with respect to the Sun in the RELATIVE_MASSES dictionary. (TO-DO: If you need, add an CLI argument to add the relative mass of the object and add it on the manual input. It requires to change the OrbitalObjects class to accept the relative mass as an argument.)
+
     The orbital elements calculated include:
     - Semi-major axis (a)
     - Eccentricity (e) 
@@ -13,12 +17,14 @@ Description:
     - Mean anomaly (M)
     - Proper time of periapsis passage (t_0)
 
-    The script can be run with command-line arguments or with manual input. It uses the Gaussian gravitational constant and relative masses of planets to perform the calculations. 
+    The script can be run with command-line arguments or with manual input. 
+    It uses the Gaussian gravitational constant and relative masses of planets to perform the calculations. 
     The results are printed in a readable format.
 
     # Manual input:
     You can give the position and velocity coordinates manually by running the script without arguments. 
-    The script will prompt you to enter the object name, reference time, position coordinates (x, y, z), and velocity components (x_speed, y_speed, z_speed).
+    The script will prompt you to enter the object name, reference time, position coordinates (x, y, z), 
+    and velocity components (x_speed, y_speed, z_speed).
 
     # Command-line arguments:
     You can use the command-line arguments
@@ -32,27 +38,10 @@ Description:
     --z_speed: z speed in au/dia.
 """
 
-
+from useful import K, RELATIVE_MASSES
 from find_vectors import FindVectors
 import numpy as np
 import argparse
-
-# Gaussian gravitational constant in au^(3/2)/dia
-K = 0.01720209908  
-
-#                    --- Useful directories ---
-
-relative_masses = {
-    # Relative masses of the planets with respect to the Sun
-    "Mercury": 1/6023600,
-    "Venus": 1/408523.71,
-    "Earth+Moon": 1/328900.56,
-    "Mars": 1/3098708.0,
-    "Jupiter": 1/1047.3486,
-    "Saturn": 1/3497.898,
-    "Uranus": 1/22902.98,
-    "Neptune": 1/19412.24,
-}
 
 #                    --- Useful functions ---
 
@@ -73,7 +62,7 @@ class OrbitalObjects(FindVectors): # Inherit from FindVectors to access its meth
     def semi_major_axis(object, v_magnitude, r_magnitude):
         # Calculate the semi-major axis (a) using the formula: a = r / (2-Q), where Q = r * v^2 / mu
 
-        Q = r_magnitude * v_magnitude**2 / K**2 / (1 + relative_masses[object])  # Q = r * v^2 / mu
+        Q = r_magnitude * v_magnitude**2 / K**2 / (1 + RELATIVE_MASSES[object])  # Q = r * v^2 / mu
         a = r_magnitude / (2 - Q)
 
         print(f"Semi-major axis: (a)= {a:.8f} ua \n")
@@ -126,7 +115,7 @@ class OrbitalObjects(FindVectors): # Inherit from FindVectors to access its meth
     @staticmethod
     def proper_time_of_periapsis_passage(t_r, M, object, a):
         # Calculate the proper time of periapsis passage (t_0) using the formula: t_0 = t_r -M/n, where n is the mean motion (n = sqrt(mu/a^3))
-        mu = K**2 * (1 + relative_masses[object])  # Standard gravitational parameter for the object
+        mu = K**2 * (1 + RELATIVE_MASSES[object])  # Standard gravitational parameter for the object
         n = (180/np.pi) * np.sqrt(mu / a**3)  # Mean motion
         t_0 = t_r - (M / n)
 
@@ -140,9 +129,9 @@ def manual_input():
     print("\t--- MANUAL INPUT ---")
     planet = input("Object name (e.g., Mercury, Earth+Moon): \n")
 
-    if planet not in relative_masses:
+    if planet not in RELATIVE_MASSES:
         print(f"The object '{planet}' is not in the database. Please add its relative mass with respect to the Sun.")
-        relative_masses[planet] = float(input("Relative mass (float number, add the denominator, e.g., 328900.56 for Earth+Moon): \n"))
+        RELATIVE_MASSES[planet] = float(input("Relative mass (float number, add the denominator, e.g., 328900.56 for Earth+Moon): \n"))
     
     t_r = float(input("Reference time (JD) = "))
     x = float(input("x = "))

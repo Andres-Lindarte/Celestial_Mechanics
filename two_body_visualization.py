@@ -26,7 +26,7 @@ Description:
 
 """
 
-from useful import K, RELATIVE_MASSES, ORBITAL_ELEMENTS
+from useful import K, RELATIVE_MASSES, ORBITAL_ELEMENTS, RELATIVE_RADII
 from two_body_problem import TwoBodyProblem, REFERENCE_TIME
 import numpy as np
 import matplotlib.pyplot as plt
@@ -54,6 +54,8 @@ def plot_orbit(object_name, time, steps):
     - A 3D plot of the object's orbit.
     
     """
+    # --- SOLVES ---
+
     x_values , y_values, z_values = [], [], []
 
     # Calculates the period of the object using the formula: T = 2 * pi * sqrt(a^3 / (K^2 * (1 + relative_mass)))
@@ -68,19 +70,25 @@ def plot_orbit(object_name, time, steps):
     
     for t in np.linspace(time, time + T, steps):
         # Calculate the position of the object at time t
-        _, _, _, _, x, y, z = object_solution.general_solution(t)
+        _, _, _, _, x, y, z, _, _, _, _ = object_solution.general_solution(t)
         x_values.append(x)
         y_values.append(y)
         z_values.append(z)
 
+    # --- PLOT ---
+
     try: 
-        from vpython import sphere, vector, color, rate, canvas
+        from vpython import sphere, vector, color, rate, canvas # type: ignore
 
         # Plot the orbit in 3D using VPython
         scene = canvas(title=f'Orbit of {object_name} from JD {time} to JD {time + T:.2f}', background=color.black)
         sun = sphere(pos=vector(0,0,0), radius=0.1, color=color.yellow, emissive=True)
-
-        object_3d = sphere(radius=0.06, color=color.red, make_trail=True)
+        # We use 10% of the sun radius, because it looks better :)
+        
+        if object_name not in RELATIVE_RADII:
+            object_3d = sphere(radius=0.01, color=color.red, make_trail=True)
+        else:
+            object_3d = sphere(radius=RELATIVE_RADII[object_name], color=color.red, make_trail=True)
 
         while True:
             for x, y, z in zip(x_values, y_values, z_values):
@@ -105,6 +113,10 @@ def manual_input():
     time = float(input("Enter the time of observation in Julian Date (JD) (e.g., 2451545.0): "))
     steps = int(input("Enter the number of steps for plotting the orbit (e.g., 1000): "))
     
+    if object_name not in RELATIVE_MASSES:
+        print(f"The object '{object_name}' is not in the database. Please add its relative mass with respect to the Sun.")
+        RELATIVE_MASSES[object_name] = float(input("Relative mass (dimesionless): \n"))
+
     return object_name, time, steps
 
 def main():
@@ -114,6 +126,7 @@ def main():
     parser.add_argument('--object', type=str, help='Name of the celestial object (default: Mars)')
     parser.add_argument('--time', type=float, help='Time of observation in Julian Date (JD) (default: 2451545.0)')
     parser.add_argument('--steps', type=int, help='Number of steps for plotting the orbit (default: 1000)')
+    parser.add_argument('--relative_mass', type=float, help='Relative mass of the object with respect to the Sun (optional)')
     args = parser.parse_args()
 
     print("\t########## VISUALIZATION OF THE ORBIT ON THE TWO-BODY PROBLEM ########## \n")
@@ -121,7 +134,8 @@ def main():
     object_name = args.object
     time = args.time
     steps = args.steps
-
+    if args.relative_mass is not None:
+        RELATIVE_MASSES[object_name] = args.relative_mass
     if not all([object_name, time, steps]):
         object_name, time, steps = manual_input()
 

@@ -2,6 +2,10 @@
 Usage:
     python two_body_problem.py --object "Mars" --time 2461174.5
 
+    NOTe: If the object is a planet in the solar system, you can use the predefined 
+            orbital elements and relative mass of the planet, it means: you only have to 
+            give the name of the planet and the time in Julian Date (JD) to calculate its position.
+    
 Description:
     This program calculates the position of an object (especially a planet) in the solar system 
     at a given time (in Julian Date) using the two-body problem. It takes into account the orbital 
@@ -23,6 +27,7 @@ Description:
     --omega: Argument of periapsis (in degrees)
     --M_r: Mean anomaly of reference (in degrees)
     --reference_time: Reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC)
+    --relative_mass: Relative mass of the object with respect to the Sun (dimensionless)
 """
 
 from coordinates import Coords
@@ -59,22 +64,24 @@ class TwoBodyProblem:
         mu = (K**2) * (1 + self.relative_mass)  # Gravitational parameter
         self.n = np.sqrt(mu/ (self.a**3))
 
-    def mean_anomaly(self, t):
-        # Calculate the mean anomaly (M) at time t using the formula: M = M_r + n * (t - reference_time)
+    # ELIPTIC ORBIT
+
+    def eliptic_mean_anomaly(self, t):
+        # Calculate the mean anomaly (M_e) at time t using the formula: M_e = M_r + n * (t - reference_time)
             # n is the mean motion, calculated as n = K * (180/pi) * sqrt((1 + relative_mass) / a^3)
         
-        M_rad = self.M_r + self.n * (t - self.t_r)
-        M_deg = np.degrees(M_rad) % 360  # Convert to degrees and ensure it's between 0 and 360
+        M_e_rad = self.M_r + self.n * (t - self.t_r)
+        M_e_deg = np.degrees(M_e_rad) % 360  # Convert to degrees and ensure it's between 0 and 360
 
         if self.verbose:
-            print(f"Mean Anomaly: (M)= {M_deg:.8f}° \n")
+            print(f"Mean Anomaly: (M)= {M_e_deg:.8f}° \n")
             
-        return M_deg
+        return M_e_deg
 
-    def eliptic_eccentric_anomaly_newton(self, M_deg, tolerance=1e-8):
+    def eliptic_eccentric_anomaly_newton(self, M_e_deg, tolerance=1e-8):
         # Solves the Kepler equation for the elipctic case using the Newton-Raphson method 
-        # to find the eccentric anomaly (E) given the mean anomaly (M) and eccentricity (e).
-        M_rad = np.radians(M_deg)
+        # to find the eccentric anomaly (E) given the mean anomaly (M_e) and eccentricity (e).
+        M_rad = np.radians(M_e_deg)
         E_rad = M_rad  # Initial value
         
         while True:
@@ -90,24 +97,104 @@ class TwoBodyProblem:
             E_rad = E_new
             
         E_deg = np.degrees(E_rad)
+
         if self.verbose:
             print(f"Eccentric Anomaly: (E) = {E_deg:.8f}° \n")
         return E_deg
 
-    def position_vector(self, E):
-        # Calculate the position vector (r) using the formula: r = a * (1 - e * cos(E))
-        r = self.a * (1 - self.e * np.cos(np.radians(E)))
-        if self.verbose:
-            print(f"Position Vector: (r)= {r:.8f} au \n")
-        return r
+    def eliptic_position_vector(self, E):
+        # Calculate the position vector (r) using the formula: r_e = a * (1 - e * cos(E))
+        r_e = self.a * (1 - self.e * np.cos(np.radians(E)))
 
-    def true_anomaly(self, E):
+        if self.verbose:
+            print(f"Position Vector: (r)= {r_e:.8f} au \n")
+        return r_e
+    
+    def eliptic_true_anomaly(self, E):
         # Calculate the true anomaly (theta) using the formula: 
         # theta = 2 * atan2(sqrt((1 + e)/(1-e)) * tan2(E/2))
-        theta = 2 * np.arctan2(np.sqrt((1 + self.e)/(1-self.e)) * np.tan(np.radians(E) / 2), 1)
+        theta_e = 2 * np.arctan2(np.sqrt((1 + self.e)/(1-self.e)) * np.tan(np.radians(E) / 2), 1)
+        
         if self.verbose:
-            print(f"True Anomaly: (theta)= {np.degrees(theta):.8f}° \n")
-        return theta
+            print(f"True Anomaly: (theta)= {np.degrees(theta_e):.8f}° \n")
+        return theta_e
+
+    # HIPERBOLIC ORBIT
+
+    def hiperbolic_mean_anomaly(self, t):
+        # Calculate the mean anomaly (M_h) at time t for hyperbolic orbits using the formula: M_h = sqrt(mu/(a^3)) * (t - reference_time)
+        mu = (K**2) * (1 + self.relative_mass)  # Gravitational parameter
+        M_h_rad = np.sqrt(mu/(self.a**3)) * (t - self.t_r)
+        M_h_deg = np.degrees(M_h_rad) % 360  # Convert to degrees
+
+        if self.verbose:
+            print(f"Mean Anomaly: (M)= {M_h_deg:.8f}° \n")
+
+        return M_h_deg
+
+    def hiperbolic_eccentric_anomaly_newton(self, M_h_deg, tolerance=1e-8):
+        # Solves the Kepler equation for the hyperbolic case using the Newton-Raphson method 
+        # to find the eccentric anomaly (F) given the mean anomaly (M_h) and eccentricity (e).
+        M_rad = np.radians(M_h_deg)
+        F_rad = M_rad  # Initial value
+        
+        while True:
+            # f(F) = e*sinh(F) - F - M
+            f_F = self.e * np.sinh(F_rad) - F_rad - M_rad
+            # Derivada: f'(F) = e*cosh(F) - 1
+            f_prime_F = self.e * np.cosh(F_rad) - 1
+            
+            # Newton-Raphson
+            F_new = F_rad - (f_F / f_prime_F)
+            if abs(F_new - F_rad) < tolerance:
+                break
+            F_rad = F_new
+            
+        F_deg = np.degrees(F_rad)
+
+        if self.verbose:
+            print(f"Eccentric Anomaly: (F) = {F_deg:.8f}° \n")
+        return F_deg
+    
+    def hiperbolic_position_vector(self, F):
+        # Calculate the position vector (r) for hyperbolic orbits using the formula: r_h = a * (e * cosh(F) - 1)
+        r_h = self.a * (self.e * np.cosh(np.radians(F)) - 1)
+
+        if self.verbose:
+            print(f"Position Vector: (r)= {r_h:.8f} au \n")
+        return r_h
+
+    def hiperbolic_true_anomaly(self, F):
+        # Calculate the true anomaly (theta) for hyperbolic orbits using the formula: 
+        # theta = 2 * atan2(sqrt((e + 1)/(e - 1)) * tanh(F/2))
+        theta_h = 2 * np.arctan2(np.sqrt((self.e + 1)/(self.e - 1)) * np.tanh(np.radians(F) / 2), 1)
+        
+        if self.verbose:
+            print(f"True Anomaly: (theta)= {np.degrees(theta_h):.8f}° \n")
+        return theta_h
+
+    # PARABOLIC ORBIT
+
+    def parabolic_true_anomaly(self, t):
+        # Calculate the true anomaly (theta) for parabolic orbits using the formula: 
+        # theta = 2 * arctan(((3C/2) + sqrt((3C/2)^2 + 1))^(1/3) + ((3C/2) - sqrt((3C/2)^2 + 1))^(1/3))
+        # where C = K * sqrt(1 + relative_mass) * (t - reference_time) / sqrt(2 * q^3)
+        C = K * np.sqrt(1 + self.relative_mass) * (t - self.t_r) / np.sqrt(2 * self.a**3)
+        theta_p = 2 * np.arctan(((3*C/2) + np.sqrt((3*C/2)**2 + 1))**(1/3) + ((3*C/2) - np.sqrt((3*C/2)**2 + 1))**(1/3))
+        
+        if self.verbose:
+            print(f"True Anomaly: (theta)= {np.degrees(theta_p):.8f}° \n")
+        return theta_p
+    
+    def parabolic_position_vector(self, theta):
+        # Calculate the position vector (r) for parabolic orbits using the formula: r_p = 2q / (1 + cos(theta))
+        r_p = 2 * self.a / (1 + np.cos(theta))
+
+        if self.verbose:
+            print(f"Position Vector: (r)= {r_p:.8f} au \n")
+        return r_p
+
+    # GENERAL FUNCTIONS
 
     def position_vector_cartesian(self, r, theta):
         # Calculate the position vector in Cartesian coordinates (x, y, z) using the formulas:
@@ -153,15 +240,35 @@ class TwoBodyProblem:
             print(f"Velocity Magnitude: (v)= {r_dot:.8f} au/dia \n")
         return vx, vy, vz, r_dot
 
-    def general_solution (self, t):
-        M = self.mean_anomaly(t)
-        E = self.eliptic_eccentric_anomaly_newton(M)
-        r = self.position_vector(E)
-        theta = self.true_anomaly(E)
-        x, y, z = self.position_vector_cartesian(r, theta)
-        vx, vy, vz, v = self.velocity_vector_cartesian(r, theta)
-
-        return M, E, r, theta, x, y, z, vx, vy, vz, v
+    def general_solution (self, t, tolerance=1e-3):
+        # General solution of the two-body problem for the object at time t. 
+        # It calculates the mean anomaly, eccentric anomaly, position vector, true anomaly, 
+        # and velocity vector in Cartesian coordinates.
+        # We use a tolerance of 0.001 to determine if the orbit is eliptic, hiperbolic or parabolic.
+        if self.e < (1 - tolerance):
+            M_e = self.eliptic_mean_anomaly(t)
+            E = self.eliptic_eccentric_anomaly_newton(M_e)
+            r = self.eliptic_position_vector(E)
+            theta = self.eliptic_true_anomaly(E)
+            x, y, z = self.position_vector_cartesian(r, theta)
+            vx, vy, vz, v = self.velocity_vector_cartesian(r, theta)
+            return M_e, E, r, theta, x, y, z, vx, vy, vz, v
+        
+        elif self.e > (1 + tolerance):
+            M_h = self.hiperbolic_mean_anomaly(t)
+            F = self.hiperbolic_eccentric_anomaly_newton(M_h)
+            r = self.hiperbolic_position_vector(F)
+            theta = self.hiperbolic_true_anomaly(F)
+            x, y, z = self.position_vector_cartesian(r, theta)
+            vx, vy, vz, v = self.velocity_vector_cartesian(r, theta)
+            return M_h, F, r, theta, x, y, z, vx, vy, vz, v
+        
+        else:
+            theta = self.parabolic_true_anomaly(t)
+            r = self.parabolic_position_vector(theta)
+            x, y, z = self.position_vector_cartesian(r, theta)
+            vx, vy, vz, v = self.velocity_vector_cartesian(r, theta)
+            return None, None, r, theta, x, y, z, vx, vy, vz, v
 
 #                --- Useful functions (Manual Input) ---
 
@@ -179,6 +286,7 @@ def manual_input():
         omega = float(input("\nEnter the argument of periapsis (omega) (in degrees):\n"))
         M_r = float(input("\nEnter the mean anomaly of reference (M_r) (in degrees):\n"))
         reference_time = float(input("\nEnter the reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC):\n"))
+        relative_mass = float(input("\nEnter the relative mass of the object with respect to the Sun (dimensionless):\n"))
 
     else:
         a = ORBITAL_ELEMENTS[object_name]["a"]
@@ -187,8 +295,10 @@ def manual_input():
         Omega = ORBITAL_ELEMENTS[object_name]["Omega"]
         omega = ORBITAL_ELEMENTS[object_name]["omega"]
         M_r = ORBITAL_ELEMENTS[object_name]["M_r"]
+        reference_time = REFERENCE_TIME
+        relative_mass = RELATIVE_MASSES[object_name]
 
-    return object_name, a, e, i, Omega, omega, M_r, reference_time
+    return object_name, a, e, i, Omega, omega, M_r, reference_time, relative_mass
 
 #              --- Useful functions (converters) ---
 
@@ -208,13 +318,14 @@ def main ():
     parser.add_argument('--omega', type=float, help='Argument of periapsis (in degrees)')
     parser.add_argument('--M_r', type=float, help='Mean anomaly of reference (in degrees)')
     parser.add_argument('--reference_time', type=float, help='Reference time (t_r) in Julian Date (JD) (e.g., 2461174.5 for May 14,2026 0h UTC)')
+    parser.add_argument('--relative_mass', type=float, help='Relative mass of the object with respect to the Sun (dimensionless)')
     args = parser.parse_args()
 
     print("\t########## SOLUTION OF THE TWO-BODY PROBLEM ########## \n")
 
     #   --- Initialize the orbital elements ---
     if args.object is None:
-        object_name, a, e, i, Omega, omega, M_r , reference_time = manual_input()
+        object_name, a, e, i, Omega, omega, M_r , reference_time, relative_mass = manual_input()
     else:
         object_name = args.object
         a = args.a if args.a is not None else ORBITAL_ELEMENTS[object_name]["a"]
@@ -224,7 +335,8 @@ def main ():
         omega = args.omega if args.omega is not None else ORBITAL_ELEMENTS[object_name]["omega"]
         M_r = args.M_r if args.M_r is not None else ORBITAL_ELEMENTS[object_name]["M_r"]
         reference_time = args.reference_time if args.reference_time is not None else REFERENCE_TIME 
-    
+        relative_mass = args.relative_mass if args.relative_mass is not None else RELATIVE_MASSES[object_name]
+
     if args.time is None:
         time = float(input("\nEnter the time in Julian Date (e.g., 2461174.5 for May 14,2026 0h UTC):\n"))
     else:        
@@ -240,7 +352,7 @@ def main ():
     object_solution = TwoBodyProblem(
                     object_name=object_name, 
                     orbital_elements=object_elements, 
-                    relative_mass=RELATIVE_MASSES.get(object_name, 0), 
+                    relative_mass=relative_mass, 
                     reference_time=reference_time)
 
     M, E, r, theta, x, y, z, vx, vy, vz, v = object_solution.general_solution(time)

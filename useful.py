@@ -41,6 +41,18 @@ RELATIVE_MASSES = {
     "Neptune": 1/19412.24,
 }
 
+# Relative radius (shape) of the planets with respect to the Sun (in astronomical units, au)
+RELATIVE_RADII = {
+    "Mercury": 0.003504,
+    "Venus": 0.008691,
+    "Earth+Moon": 0.009149,
+    "Mars": 0.004868,
+    "Jupiter": 0.100398,
+    "Saturn": 0.083626,
+    "Uranus": 0.036422,
+    "Neptune": 0.035359,
+}
+
 # Orbital elements of the planets for May 14,2026 0h UTC (JD 2461174.5)
 """
 a : Semi-major axis (in astronomical units, au)
